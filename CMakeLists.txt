@@ -21,7 +21,7 @@ find_package(CUDAToolkit REQUIRED)
 # These variables are PER-LANGUAGE: CMAKE_CXX_STANDARD drives .cpp compilation,
 # CMAKE_CUDA_STANDARD drives .cu compilation. A target with both kinds of source
 # gets each language compiled at its own standard. That's the whole trick.
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -29,11 +29,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # and CMake's CUDA_STANDARD=23 needs 3.25+. Bump only when both are satisfied;
 # otherwise device stays at 20 while host code is C++23 regardless.
 set(CMAKE_CUDA_STANDARD 20)
-if(CUDAToolkit_VERSION VERSION_GREATER_EQUAL 13.3
-   AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.25)
-  set(CMAKE_CUDA_STANDARD 23)
-endif()
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_EXTENSIONS OFF)
 
 # Build for the GPU actually installed in this machine (3.24+).
 set(CMAKE_CUDA_ARCHITECTURES native)
@@ -53,7 +50,7 @@ target_compile_options(qmc_flags INTERFACE
 
 # ── Core library: host analytics + the device kernel ─────────────────────────
 add_library(qmc STATIC
-  src/black_scholes.cpp   # C++23 host: the Black-Scholes oracle
+  src/black_scholes.cpp   # C++20 host: the Black-Scholes oracle
   src/pricer.cu           # C++20 device: kernel + reduction + launch wrapper
 )
 target_include_directories(qmc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

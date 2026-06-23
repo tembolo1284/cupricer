@@ -1,6 +1,7 @@
 // src/main.cpp
 #include <cstdlib>    // EXIT_SUCCESS, EXIT_FAILURE
-#include <print>      // std::println  (C++23; needs libstdc++ 14+ / libc++ 17+)
+#include <iomanip>    // std::fixed, std::setprecision
+#include <iostream>
 
 #include "qmc/black_scholes.hpp"
 #include "qmc/option.hpp"
@@ -19,16 +20,17 @@ int main() {
     };
 
     const auto result = qmc::price_european(opt, cfg);
-    if (!result) {
-        std::println(stderr, "pricing rejected: {}",
-                     qmc::error_message(result.error()));
+    if (!result.ok) {
+        std::cerr << "pricing rejected: "
+                  << qmc::error_message(result.error)
+                  << '\n';
         return EXIT_FAILURE;
     }
 
     const double analytic = qmc::black_scholes_price(opt);
-    const double mc        = result->price;
-    const double se        = result->std_error;
-    const double diff      = mc - analytic;
+    const double mc       = result.value.price;
+    const double se       = result.value.std_error;
+    const double diff     = mc - analytic;
 
     // The validation metric: how many standard errors separate the MC estimate
     // from the analytic truth. |z| under ~3 is consistent with a correct kernel;
@@ -36,18 +38,34 @@ int main() {
     // e.g. a degenerate zero-variance payoff — guard against div-by-zero.)
     const double z = (se > 0.0) ? diff / se : 0.0;
 
-    std::println("European {} | S={:.2f} K={:.2f} r={:.4f} sigma={:.4f} T={:.2f}",
-                 opt.type == qmc::OptionType::Call ? "call" : "put",
-                 opt.spot, opt.strike, opt.rate, opt.vol, opt.maturity);
-    std::println("paths      : {}", result->n_paths);
-    std::println("MC price   : {:.6f}", mc);
-    std::println("std error  : {:.6f}", se);
-    std::println("analytic   : {:.6f}", analytic);
-    std::println("difference : {:+.6f}  ({:+.2f} std errors)", diff, z);
-    std::println("95% CI     : [{:.6f}, {:.6f}]  analytic {} interval",
-                 mc - 1.96 * se, mc + 1.96 * se,
-                 (analytic >= mc - 1.96 * se && analytic <= mc + 1.96 * se)
-                     ? "INSIDE" : "OUTSIDE");
+    std::cout << "European "
+              << (opt.type == qmc::OptionType::Call ? "call" : "put")
+              << " | S=" << std::fixed << std::setprecision(2) << opt.spot
+              << " K=" << std::fixed << std::setprecision(2) << opt.strike
+              << " r=" << std::fixed << std::setprecision(4) << opt.rate
+              << " sigma=" << std::fixed << std::setprecision(4) << opt.vol
+              << " T=" << std::fixed << std::setprecision(2) << opt.maturity
+              << '\n';
+
+    std::cout << "paths      : " << result.value.n_paths << '\n';
+    std::cout << "MC price   : " << mc << '\n';
+    std::cout << "std error  : " << se << '\n';
+    std::cout << "analytic   : " << analytic << '\n';
+
+    std::cout << std::showpos << std::fixed << std::setprecision(6)
+              << "difference : " << diff
+              << std::noshowpos << "  ("
+              << std::showpos << std::fixed << std::setprecision(2)
+              << z
+              << std::noshowpos << " std errors)\n";
+
+    std::cout << std::fixed << std::setprecision(6)
+              << "95% CI     : [" << (mc - 1.96 * se)
+              << ", " << (mc + 1.96 * se)
+              << "]  analytic "
+              << ((analytic >= mc - 1.96 * se && analytic <= mc + 1.96 * se)
+                    ? "INSIDE" : "OUTSIDE")
+              << " interval\n";
 
     return EXIT_SUCCESS;
 }
